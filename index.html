@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Segmentador Pink Elephant</title>
+<style>
+  :root{
+    --primary:#C2185B; --primary-dk:#8E1247; --dark:#1F2937; --dark-2:#2D3B4E;
+    --accent:#F5A623; --card-tint:#FCEEF3; --grey-muted:#9AA1AC; --grey-light:#E4E7EB;
+    --text:#1F2937; --text-muted:#6B7280; --bg:#F7F7F9; --white:#FFFFFF;
+    --border:#E2C3D2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14181F; --white:#1C222C; --text:#EDEFF3; --text-muted:#9AA3B0;
+      --card-tint:#2A2130; --border:#3A2A34; --grey-light:#2A313D;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14181F; --white:#1C222C; --text:#EDEFF3; --text-muted:#9AA3B0;
+    --card-tint:#2A2130; --border:#3A2A34; --grey-light:#2A313D;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 16px 60px;}
+  header.top{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+  .badge{width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none;}
+  header.top h1{font-size:19px;margin:0;}
+  header.top p{margin:2px 0 0;color:var(--text-muted);font-size:12.5px;}
+  nav.tabs{display:flex;gap:6px;margin-left:auto;}
+  nav.tabs button{border:1px solid var(--border);background:var(--white);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;}
+  nav.tabs button.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px;}
+  .kpi{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+  .kpi .l{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);font-weight:700;}
+  .kpi .v{font-size:22px;font-weight:700;margin-top:2px;}
+  .kpi .v.accent{color:var(--primary);}
+  .panel{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;}
+  .panel h2{font-size:13px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);}
+  .filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+  .filters label{display:block;font-size:10.5px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;}
+  select,input[type=text],input[type=search]{width:100%;padding:8px 9px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:13px;}
+  .searchrow{margin-top:10px;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:10px 0 14px;}
+  .count{font-size:13.5px;}
+  .count b{color:var(--primary);}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;}
+  button.btn{border:1px solid var(--border);background:var(--white);color:var(--text);padding:8px 13px;border-radius:7px;font-size:12.5px;font-weight:600;cursor:pointer;}
+  button.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  button.btn.gold{background:var(--accent);border-color:var(--accent);color:#2b2200;}
+  button.btn:disabled{opacity:.5;cursor:default;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{text-align:left;padding:8px 8px;background:var(--grey-light);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);position:sticky;top:0;}
+  td{padding:8px 8px;border-bottom:1px solid var(--border);vertical-align:top;}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;}
+  .pill.Estrategico,.pill.Estratégico{background:#FCE3EE;color:var(--primary-dk);}
+  .pill.Tactico,.pill.Táctico{background:#1F2937;color:#fff;}
+  .pill.Operativo{background:#FEF0DA;color:#8A5A00;}
+  .pill.muted{background:var(--grey-light);color:var(--text-muted);}
+  .rowbtn{border:none;background:none;color:var(--primary);font-weight:700;cursor:pointer;font-size:12px;padding:0;}
+  .pager{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:12px;font-size:13px;}
+  .pager button{padding:6px 11px;}
+  footer.note{margin-top:22px;color:var(--text-muted);font-size:11.5px;text-align:center;}
+  .hidden{display:none !important;}
+  .modal-bg{position:fixed;inset:0;background:rgba(15,15,20,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;}
+  .modal{background:var(--white);border-radius:12px;padding:20px;max-width:420px;width:100%;}
+  .modal h3{margin:0 0 4px;font-size:16px;}
+  .modal p.sub{margin:0 0 14px;color:var(--text-muted);font-size:12.5px;}
+  .modal label{display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin:10px 0 4px;text-transform:uppercase;}
+  .modal .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;}
+  .err{color:var(--primary-dk);font-size:12px;margin-top:8px;}
+  .reglas-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:820px){.reglas-grid{grid-template-columns:1fr;}}
+  .addform{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .addform input,.addform select{flex:1;min-width:90px;}
+  .taglist{max-height:360px;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+  .tagrow{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);font-size:12.5px;gap:8px;}
+  .tagrow:last-child{border-bottom:none;}
+  .tagrow .meta{color:var(--text-muted);font-size:10.5px;}
+  .tagrow button{border:none;background:none;color:var(--primary);cursor:pointer;font-weight:700;font-size:16px;line-height:1;padding:0 2px;}
+  .catsec h3{font-size:13px;margin:16px 0 8px;}
+  .banner{background:var(--card-tint);border:1px solid var(--border);border-radius:9px;padding:10px 13px;font-size:12px;color:var(--primary-dk);margin-bottom:12px;}
+  .spin{font-size:13px;color:var(--text-muted);padding:20px;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="badge">PE</div>
+    <div>
+      <h1>Segmentador de contactos — Pink Elephant</h1>
+      <p>Conectado en vivo a la base — los cambios se guardan para todos</p>
+    </div>
+    <nav class="tabs">
+      <button id="tabContactosBtn" class="active">Contactos</button>
+      <button id="tabReglasBtn">Reglas de clasificación</button>
+    </nav>
+  </header>
+
+  <!-- ===================== VISTA: CONTACTOS ===================== -->
+  <section id="viewContactos">
+    <div class="kpis">
+      <div class="kpi"><div class="l">Base total</div><div class="v" id="kpiTotal">—</div></div>
+      <div class="kpi"><div class="l">En este segmento</div><div class="v accent" id="kpiSegmento">—</div></div>
+      <div class="kpi"><div class="l">Nivel estratégico</div><div class="v" id="kpiEstrategico">—</div></div>
+      <div class="kpi"><div class="l">Con sector identificado</div><div class="v" id="kpiSector">—</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Filtros</h2>
+      <div class="filters">
+        <div><label>Nivel</label><select id="fNivel"></select></div>
+        <div><label>Área</label><select id="fArea"></select></div>
+        <div><label>Sector</label><select id="fSector"></select></div>
+        <div><label>Tamaño de empresa</label><select id="fTamano"></select></div>
+        <div><label>País</label><select id="fPais"></select></div>
+      </div>
+      <div class="searchrow">
+        <label style="font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Buscar (nombre, empresa, email, cargo)</label>
+        <input type="search" id="fBuscar" placeholder="ej. director, liverpool, bbva..." />
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="count"><b id="countNum">—</b> contactos en este segmento</div>
+      <div class="btns">
+        <button class="btn" id="btnLimpiar">Limpiar filtros</button>
+        <button class="btn gold" id="btnReclasificar">↻ Reclasificar automáticos</button>
+        <button class="btn primary" id="btnExport">Exportar CSV del segmento</button>
+      </div>
+    </div>
+
+    <div class="panel" style="padding:0;overflow:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th><th>Empresa</th><th>Cargo</th><th>Nivel</th><th>Área</th>
+            <th>Sector</th><th>Tamaño</th><th>País</th><th>Email</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"><tr><td colspan="10" class="spin">Cargando…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <button class="btn" id="btnPrev">‹ Anterior</button>
+      <span id="pagerLabel">—</span>
+      <button class="btn" id="btnNext">Siguiente ›</button>
+    </div>
+  </section>
+
+  <!-- ===================== VISTA: REGLAS ===================== -->
+  <section id="viewReglas" class="hidden">
+    <div class="banner">
+      Edita aquí las palabras clave que deciden Nivel/Área (por Cargo) y el catálogo de Sector/Tamaño por empresa — sin tocar código. Los cambios aplican a reclasificaciones futuras (botón "Reclasificar automáticos" en Contactos); no reescriben contactos que ya fueron editados a mano.
+    </div>
+    <div class="reglas-grid">
+      <div class="panel">
+        <h2>Reglas de Nivel y Área (por Cargo)</h2>
+        <div class="addform">
+          <select id="rTipo"><option value="nivel">Nivel</option><option value="area">Área</option></select>
+          <input type="text" id="rCategoria" placeholder="Categoría (ej. Táctico)" />
+          <input type="text" id="rPalabra" placeholder="Palabra clave (ej. gerente)" />
+          <button class="btn primary" id="btnAddRegla">+ Agregar</button>
+        </div>
+        <div class="taglist" id="listReglas"></div>
+      </div>
+      <div class="panel">
+        <h2>Catálogo de empresas (Sector / Tamaño)</h2>
+        <div class="addform">
+          <input type="text" id="cPatron" placeholder="Patrón en el nombre (ej. bbva)" />
+          <input type="text" id="cSector" placeholder="Sector" />
+          <input type="text" id="cTamano" placeholder="Tamaño" />
+          <button class="btn primary" id="btnAddCatalogo">+ Agregar</button>
+        </div>
+        <div class="taglist" id="listCatalogo"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="note">PINK ELEPHANT · Segmentador de contactos · datos en Supabase, página en GitHub Pages</footer>
+</div>
+
+<!-- ===================== MODAL: editar contacto ===================== -->
+<div class="modal-bg hidden" id="modalContacto">
+  <div class="modal">
+    <h3>Editar Nivel / Área</h3>
+    <p class="sub" id="modalContactoNombre"></p>
+    <label>Nivel</label>
+    <select id="mcNivel">
+      <option>Estratégico</option><option>Táctico</option><option>Operativo</option>
+      <option>Sin clasificar</option><option>Sin información</option>
+    </select>
+    <label>Área</label>
+    <input type="text" id="mcArea" />
+    <div class="err hidden" id="mcErr"></div>
+    <div class="actions">
+      <button class="btn" id="mcCancel">Cancelar</button>
+      <button class="btn primary" id="mcSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: editar empresa ===================== -->
+<div class="modal-bg hidden" id="modalEmpresa">
+  <div class="modal">
+    <h3>Editar Sector / Tamaño</h3>
+    <p class="sub" id="modalEmpresaNombre"></p>
+    <label>Sector</label>
+    <input type="text" id="meSector" />
+    <label>Tamaño</label>
+    <input type="text" id="meTamano" />
+    <div class="err hidden" id="meErr"></div>
+    <div class="actions">
+      <button class="btn" id="meCancel">Cancelar</button>
+      <button class="btn primary" id="meSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// ===========================================================================
+// Configuración de conexión — llave "publishable" (segura de exponer: la
+// protección real la da Row Level Security en las tablas, no el secreto de
+// esta llave).
+// ===========================================================================
+const SUPABASE_URL = "https://ggghwdfsuczuzolziqqc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ZH64cp8HGRF5TO4AE2P6OQ_74DQGlwi";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const PAGE_SIZE = 50;
+const state = { page: 0, filters: { nivel: "", area: "", sector: "", tamano: "", pais: "", buscar: "" } };
+
+const NIVELES = ["Estratégico", "Táctico", "Operativo", "Sin clasificar", "Sin información"];
+
+function norm(s) {
+  if (!s) return "";
+  return s.toString().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+}
+function hasWord(text, word) {
+  const re = new RegExp("\\b" + word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b");
+  return re.test(text);
+}
+function pillClass(v) {
+  if (!v) return "muted";
+  const key = v.replace(/\s+/g, "");
+  return ["Estratégico", "Táctico", "Operativo"].includes(v) ? v.replace(/[éá]/g, (m) => ({ "é": "e", "á": "a" }[m])) : "muted";
+}
+function escapeHtml(s) {
+  return (s ?? "").toString().replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// ---------------------------------------------------------------------------
+// Vista principal: filtros + tabla + KPIs
+// ---------------------------------------------------------------------------
+function baseQuery() {
+  let q = sb.from("pe_contactos").select("contact_id,nombre,apellido,cargo,nivel,area,empresa_id,pais,email,pe_empresas(empresa_id,nombre,sector,tamano)", { count: "exact" });
+  const f = state.filters;
+  if (f.nivel) q = q.eq("nivel", f.nivel);
+  if (f.area) q = q.eq("area", f.area);
+  if (f.pais) q = q.eq("pais", f.pais);
+  if (f.buscar) {
+    const b = `%${f.buscar}%`;
+    q = q.or(`nombre.ilike.${b},apellido.ilike.${b},cargo.ilike.${b},email.ilike.${b}`);
+  }
+  return q;
+}
+
+async function loadPage() {
+  document.getElementById("tbody").innerHTML = '<tr><td colspan="10" class="spin">Cargando…</td></tr>';
+  let q = baseQuery();
+  const from = state.page * PAGE_SIZE, to = from + PAGE_SIZE - 1;
+  q = q.order("contact_id", { ascending: true }).range(from, to);
+  const { data, error, count } = await q;
+  if (error) { document.getElementById("tbody").innerHTML = `<tr><td colspan="10" class="spin">Error: ${escapeHtml(error.message)}</td></tr>`; return; }
+
+  let rows = data || [];
+  // filtros de sector/tamano se aplican sobre la empresa relacionada (join)
+  const f = state.filters;
+  if (f.sector) rows = rows.filter(r => r.pe_empresas && r.pe_empresas.sector === f.sector);
+  if (f.tamano) rows = rows.filter(r => r.pe_empresas && r.pe_empresas.tamano === f.tamano);
+
+  renderTable(rows);
+  document.getElementById("countNum").textContent = (count ?? 0).toLocaleString("es-MX");
+  document.getElementById("kpiSegmento").textContent = (count ?? 0).toLocaleString("es-MX");
+  const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
+  document.getElementById("pagerLabel").textContent = `Página ${state.page + 1} de ${totalPages}`;
+  document.getElementById("btnPrev").disabled = state.page <= 0;
+  document.getElementById("btnNext").disabled = state.page + 1 >= totalPages;
+}
+
+function renderTable(rows) {
+  const tb = document.getElementById("tbody");
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="10" class="spin">Sin resultados para estos filtros</td></tr>'; return; }
+  tb.innerHTML = rows.map(r => {
+    const emp = r.pe_empresas;
+    return `<tr>
+      <td>${escapeHtml(r.nombre)} ${escapeHtml(r.apellido)}</td>
+      <td>${escapeHtml(emp ? emp.nombre : "")}</td>
+      <td>${escapeHtml(r.cargo)}</td>
+      <td><span class="pill ${pillClass(r.nivel)}">${escapeHtml(r.nivel)}</span></td>
+      <td>${escapeHtml(r.area)}</td>
+      <td>${escapeHtml(emp ? emp.sector : "")}</td>
+      <td>${escapeHtml(emp ? emp.tamano : "")}</td>
+      <td>${escapeHtml(r.pais)}</td>
+      <td>${escapeHtml(r.email)}</td>
+      <td>
+        <button class="rowbtn" onclick='openEditContacto(${JSON.stringify(r.contact_id)}, ${JSON.stringify(r.nombre + " " + (r.apellido||""))}, ${JSON.stringify(r.nivel)}, ${JSON.stringify(r.area)})'>Nivel/Área</button>
+        ${emp ? `<br/><button class="rowbtn" onclick='openEditEmpresa(${emp.empresa_id}, ${JSON.stringify(emp.nombre)}, ${JSON.stringify(emp.sector)}, ${JSON.stringify(emp.tamano)})'>Sector/Tamaño</button>` : ""}
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+async function loadKpis() {
+  const { count: total } = await sb.from("pe_contactos").select("*", { count: "exact", head: true });
+  document.getElementById("kpiTotal").textContent = (total ?? 0).toLocaleString("es-MX");
+  const { count: estrategico } = await sb.from("pe_contactos").select("*", { count: "exact", head: true }).eq("nivel", "Estratégico");
+  document.getElementById("kpiEstrategico").textContent = (estrategico ?? 0).toLocaleString("es-MX");
+  const { count: conSector } = await sb.from("pe_empresas").select("*", { count: "exact", head: true }).not("sector", "in", '("Desconocido","Sin informacion","Sin información")');
+  document.getElementById("kpiSector").textContent = (conSector ?? 0).toLocaleString("es-MX");
+}
+
+async function fillFilterOptions() {
+  const sel = (id, opts, allLabel) => {
+    const el = document.getElementById(id);
+    el.innerHTML = `<option value="">${allLabel}</option>` + opts.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("");
+  };
+  sel("fNivel", NIVELES, "Todos");
+
+  const { data: areas } = await sb.from("pe_contactos").select("area").not("area", "is", null).limit(1000);
+  const uniqArea = [...new Set((areas || []).map(a => a.area).filter(Boolean))].sort();
+  sel("fArea", uniqArea, "Todas");
+
+  const { data: sectores } = await sb.from("pe_empresas").select("sector").not("sector", "is", null).limit(4886);
+  const uniqSector = [...new Set((sectores || []).map(a => a.sector).filter(Boolean))].sort();
+  sel("fSector", uniqSector, "Todos");
+
+  const { data: tamanos } = await sb.from("pe_empresas").select("tamano").not("tamano", "is", null).limit(4886);
+  const uniqTam = [...new Set((tamanos || []).map(a => a.tamano).filter(Boolean))].sort();
+  sel("fTamano", uniqTam, "Todos");
+
+  const { data: paises } = await sb.from("pe_contactos").select("pais").not("pais", "is", null).limit(2000);
+  const uniqPais = [...new Set((paises || []).map(a => a.pais).filter(Boolean))].sort();
+  sel("fPais", uniqPais, "Todos");
+}
+
+function wireFilters() {
+  ["fNivel", "fArea", "fSector", "fTamano", "fPais"].forEach(id => {
+    document.getElementById(id).addEventListener("change", (e) => {
+      const key = id.slice(1).toLowerCase();
+      state.filters[key] = e.target.value;
+      state.page = 0;
+      loadPage();
+    });
+  });
+  let t;
+  document.getElementById("fBuscar").addEventListener("input", (e) => {
+    clearTimeout(t);
+    t = setTimeout(() => { state.filters.buscar = e.target.value.trim(); state.page = 0; loadPage(); }, 350);
+  });
+  document.getElementById("btnLimpiar").addEventListener("click", () => {
+    state.filters = { nivel: "", area: "", sector: "", tamano: "", pais: "", buscar: "" };
+    ["fNivel", "fArea", "fSector", "fTamano", "fPais"].forEach(id => document.getElementById(id).value = "");
+    document.getElementById("fBuscar").value = "";
+    state.page = 0;
+    loadPage();
+  });
+  document.getElementById("btnPrev").addEventListener("click", () => { if (state.page > 0) { state.page--; loadPage(); } });
+  document.getElementById("btnNext").addEventListener("click", () => { state.page++; loadPage(); });
+}
+
+// ---------------------------------------------------------------------------
+// Exportar CSV del segmento actual (pagina en lotes de 1000 por detrás)
+// ---------------------------------------------------------------------------
+async function exportCsv() {
+  const btn = document.getElementById("btnExport");
+  btn.disabled = true; btn.textContent = "Exportando…";
+  try {
+    let all = [], from = 0, batch = 1000;
+    while (true) {
+      let q = baseQuery().order("contact_id", { ascending: true }).range(from, from + batch - 1);
+      const { data, error } = await q;
+      if (error) throw error;
+      let rows = data || [];
+      const f = state.filters;
+      if (f.sector) rows = rows.filter(r => r.pe_empresas && r.pe_empresas.sector === f.sector);
+      if (f.tamano) rows = rows.filter(r => r.pe_empresas && r.pe_empresas.tamano === f.tamano);
+      all = all.concat(rows);
+      if (!data || data.length < batch) break;
+      from += batch;
+    }
+    const cols = ["Nombre", "Apellido", "Empresa", "Cargo", "Nivel", "Área", "Sector", "Tamaño", "País", "Email"];
+    const toCsvValue = (v) => { const s = (v ?? "").toString(); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const lines = [cols.join(",")];
+    all.forEach(r => {
+      const emp = r.pe_empresas;
+      lines.push([r.nombre, r.apellido, emp ? emp.nombre : "", r.cargo, r.nivel, r.area, emp ? emp.sector : "", emp ? emp.tamano : "", r.pais, r.email].map(toCsvValue).join(","));
+    });
+    const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `segmento_pink_elephant_${all.length}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert("No se pudo exportar: " + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Exportar CSV del segmento";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Modal: editar Nivel/Área de un contacto
+// ---------------------------------------------------------------------------
+let editingContactId = null;
+function openEditContacto(id, nombre, nivel, area) {
+  editingContactId = id;
+  document.getElementById("modalContactoNombre").textContent = nombre;
+  document.getElementById("mcNivel").value = nivel || "Sin información";
+  document.getElementById("mcArea").value = area || "";
+  document.getElementById("mcErr").classList.add("hidden");
+  document.getElementById("modalContacto").classList.remove("hidden");
+}
+document.getElementById("mcCancel").addEventListener("click", () => document.getElementById("modalContacto").classList.add("hidden"));
+document.getElementById("mcSave").addEventListener("click", async () => {
+  const nivel = document.getElementById("mcNivel").value;
+  const area = document.getElementById("mcArea").value.trim();
+  const { error } = await sb.from("pe_contactos").update({ nivel, area, nivel_fuente: "Editado a mano", editado_manual: true }).eq("contact_id", editingContactId);
+  if (error) { const e = document.getElementById("mcErr"); e.textContent = error.message; e.classList.remove("hidden"); return; }
+  document.getElementById("modalContacto").classList.add("hidden");
+  loadPage(); loadKpis();
+});
+
+// ---------------------------------------------------------------------------
+// Modal: editar Sector/Tamaño de una empresa
+// ---------------------------------------------------------------------------
+let editingEmpresaId = null;
+function openEditEmpresa(id, nombre, sector, tamano) {
+  editingEmpresaId = id;
+  document.getElementById("modalEmpresaNombre").textContent = nombre;
+  document.getElementById("meSector").value = sector || "";
+  document.getElementById("meTamano").value = tamano || "";
+  document.getElementById("meErr").classList.add("hidden");
+  document.getElementById("modalEmpresa").classList.remove("hidden");
+}
+document.getElementById("meCancel").addEventListener("click", () => document.getElementById("modalEmpresa").classList.add("hidden"));
+document.getElementById("meSave").addEventListener("click", async () => {
+  const sector = document.getElementById("meSector").value.trim();
+  const tamano = document.getElementById("meTamano").value.trim();
+  const { error } = await sb.from("pe_empresas").update({ sector, tamano, fuente_sector: "Editado a mano", editado_manual: true }).eq("empresa_id", editingEmpresaId);
+  if (error) { const e = document.getElementById("meErr"); e.textContent = error.message; e.classList.remove("hidden"); return; }
+  document.getElementById("modalEmpresa").classList.add("hidden");
+  loadPage(); loadKpis(); fillFilterOptions();
+});
+
+// ---------------------------------------------------------------------------
+// Vista: Reglas de clasificación (pe_reglas + pe_catalogo_empresas)
+// ---------------------------------------------------------------------------
+async function loadReglas() {
+  const { data } = await sb.from("pe_reglas").select("*").order("tipo").order("categoria").order("palabra_clave");
+  const el = document.getElementById("listReglas");
+  el.innerHTML = (data || []).map(r => `
+    <div class="tagrow">
+      <div><b>${escapeHtml(r.palabra_clave)}</b> <span class="meta">${r.tipo === "nivel" ? "Nivel" : "Área"} → ${escapeHtml(r.categoria)}</span></div>
+      <button onclick="deleteRegla(${r.id})" title="Eliminar">✕</button>
+    </div>`).join("") || '<div class="tagrow">Sin reglas</div>';
+}
+async function deleteRegla(id) {
+  await sb.from("pe_reglas").delete().eq("id", id);
+  loadReglas();
+}
+document.getElementById("btnAddRegla").addEventListener("click", async () => {
+  const tipo = document.getElementById("rTipo").value;
+  const categoria = document.getElementById("rCategoria").value.trim();
+  const palabra_clave = norm(document.getElementById("rPalabra").value.trim());
+  if (!categoria || !palabra_clave) return;
+  await sb.from("pe_reglas").insert({ tipo, categoria, palabra_clave, orden: 0 });
+  document.getElementById("rCategoria").value = ""; document.getElementById("rPalabra").value = "";
+  loadReglas();
+});
+
+async function loadCatalogo() {
+  const { data } = await sb.from("pe_catalogo_empresas").select("*").order("patron");
+  const el = document.getElementById("listCatalogo");
+  el.innerHTML = (data || []).map(r => `
+    <div class="tagrow">
+      <div><b>${escapeHtml(r.patron)}</b> <span class="meta">${escapeHtml(r.sector)} · ${escapeHtml(r.tamano)}</span></div>
+      <button onclick="deleteCatalogo(${r.id})" title="Eliminar">✕</button>
+    </div>`).join("") || '<div class="tagrow">Sin registros</div>';
+}
+async function deleteCatalogo(id) {
+  await sb.from("pe_catalogo_empresas").delete().eq("id", id);
+  loadCatalogo();
+}
+document.getElementById("btnAddCatalogo").addEventListener("click", async () => {
+  const patron = norm(document.getElementById("cPatron").value.trim());
+  const sector = document.getElementById("cSector").value.trim();
+  const tamano = document.getElementById("cTamano").value.trim();
+  if (!patron || !sector || !tamano) return;
+  await sb.from("pe_catalogo_empresas").insert({ patron, sector, tamano });
+  document.getElementById("cPatron").value = ""; document.getElementById("cSector").value = ""; document.getElementById("cTamano").value = "";
+  loadCatalogo();
+});
+
+// ---------------------------------------------------------------------------
+// Reclasificar automáticos: solo contactos "Sin clasificar" y empresas
+// "Desconocido" que NO fueron editados a mano — usa las reglas actuales.
+// ---------------------------------------------------------------------------
+async function reclasificar() {
+  const btn = document.getElementById("btnReclasificar");
+  btn.disabled = true; btn.textContent = "Reclasificando…";
+  try {
+    const { data: reglas } = await sb.from("pe_reglas").select("*");
+    const nivelReglas = { Estratégico: [], Táctico: [], Operativo: [] };
+    const mapTipoNivel = { "Estrategico": "Estratégico", "Tactico": "Táctico", "Operativo": "Operativo", "Estratégico": "Estratégico", "Táctico": "Táctico" };
+    (reglas || []).filter(r => r.tipo === "nivel").forEach(r => {
+      const cat = mapTipoNivel[r.categoria] || r.categoria;
+      if (!nivelReglas[cat]) nivelReglas[cat] = [];
+      nivelReglas[cat].push(r.palabra_clave);
+    });
+    const areaReglas = (reglas || []).filter(r => r.tipo === "area").sort((a, b) => a.orden - b.orden);
+
+    let contactosActualizados = 0, empresasActualizadas = 0;
+
+    // --- contactos "Sin clasificar" ---
+    const { data: sinClasif } = await sb.from("pe_contactos").select("contact_id,cargo").eq("nivel", "Sin clasificar").eq("editado_manual", false).limit(5000);
+    const upd = [];
+    for (const r of (sinClasif || [])) {
+      const c = norm(r.cargo);
+      let nivel = null;
+      for (const cat of ["Estratégico", "Táctico", "Operativo"]) {
+        if ((nivelReglas[cat] || []).some(w => hasWord(c, w))) { nivel = cat; break; }
+      }
+      let area = null;
+      const cpad = ` ${c} `;
+      for (const ar of areaReglas) {
+        const kw = ar.palabra_clave;
+        const kwpad = kw.startsWith(" ") ? kw : ` ${kw} `;
+        if (cpad.includes(kwpad) || (kw.trim().length > 2 && c.includes(kw.trim()))) { area = ar.categoria; break; }
+      }
+      if (nivel) upd.push({ contact_id: r.contact_id, nivel, area: area || "Otro / Sin clasificar", nivel_fuente: "Regla: cargo (reclasificado)" });
+    }
+    for (let i = 0; i < upd.length; i += 300) {
+      const chunk = upd.slice(i, i + 300);
+      for (const row of chunk) {
+        await sb.from("pe_contactos").update({ nivel: row.nivel, area: row.area, nivel_fuente: row.nivel_fuente }).eq("contact_id", row.contact_id);
+      }
+      contactosActualizados += chunk.length;
+    }
+
+    // --- empresas "Desconocido" ---
+    const { data: catalogo } = await sb.from("pe_catalogo_empresas").select("*");
+    const { data: desconocidas } = await sb.from("pe_empresas").select("empresa_id,nombre").eq("sector", "Desconocido").eq("editado_manual", false).limit(5000);
+    for (const e of (desconocidas || [])) {
+      const c = norm(e.nombre);
+      const cpad = ` ${c} `;
+      let match = null;
+      for (const cat of (catalogo || [])) {
+        const kw = cat.patron;
+        if (cpad.includes(kw) || c.includes(kw.trim())) { match = cat; break; }
+      }
+      if (match) {
+        await sb.from("pe_empresas").update({ sector: match.sector, tamano: match.tamano, fuente_sector: "Catálogo (reclasificado)" }).eq("empresa_id", e.empresa_id);
+        empresasActualizadas++;
+      }
+    }
+
+    alert(`Listo — se reclasificaron ${contactosActualizados} contactos y ${empresasActualizadas} empresas con las reglas actuales.`);
+    loadPage(); loadKpis(); fillFilterOptions();
+  } catch (e) {
+    alert("Error al reclasificar: " + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "↻ Reclasificar automáticos";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tabs + arranque
+// ---------------------------------------------------------------------------
+document.getElementById("tabContactosBtn").addEventListener("click", () => {
+  document.getElementById("tabContactosBtn").classList.add("active");
+  document.getElementById("tabReglasBtn").classList.remove("active");
+  document.getElementById("viewContactos").classList.remove("hidden");
+  document.getElementById("viewReglas").classList.add("hidden");
+});
+document.getElementById("tabReglasBtn").addEventListener("click", () => {
+  document.getElementById("tabReglasBtn").classList.add("active");
+  document.getElementById("tabContactosBtn").classList.remove("active");
+  document.getElementById("viewReglas").classList.remove("hidden");
+  document.getElementById("viewContactos").classList.add("hidden");
+  loadReglas(); loadCatalogo();
+});
+document.getElementById("btnExport").addEventListener("click", exportCsv);
+document.getElementById("btnReclasificar").addEventListener("click", reclasificar);
+
+(async function init() {
+  wireFilters();
+  await Promise.all([loadKpis(), fillFilterOptions()]);
+  await loadPage();
+})();
+</script>
+</body>
+</html>
