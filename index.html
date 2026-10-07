@@ -237,7 +237,8 @@
         <h2>Reglas de Nivel y Área (por Cargo)</h2>
         <div class="addform">
           <select id="rTipo"><option value="nivel">Nivel</option><option value="area">Área</option></select>
-          <input type="text" id="rCategoria" placeholder="Categoría (ej. Táctico)" />
+          <select id="rCategoria"></select>
+          <input type="text" id="rCategoriaNueva" placeholder="Escribe la nueva área…" class="hidden" />
           <input type="text" id="rPalabra" placeholder="Palabra clave (ej. gerente)" />
           <button class="btn primary" id="btnAddRegla">+ Agregar</button>
         </div>
@@ -247,8 +248,10 @@
         <h2>Catálogo de empresas (Sector / Tamaño)</h2>
         <div class="addform">
           <input type="text" id="cPatron" placeholder="Patrón en el nombre (ej. bbva)" />
-          <input type="text" id="cSector" placeholder="Sector" />
-          <input type="text" id="cTamano" placeholder="Tamaño" />
+          <select id="cSector"></select>
+          <input type="text" id="cSectorNueva" placeholder="Escribe el nuevo sector…" class="hidden" />
+          <select id="cTamano"></select>
+          <input type="text" id="cTamanoNueva" placeholder="Escribe el nuevo tamaño…" class="hidden" />
           <button class="btn primary" id="btnAddCatalogo">+ Agregar</button>
         </div>
         <div class="taglist" id="listCatalogo"></div>
@@ -539,7 +542,75 @@ document.getElementById("meSave").addEventListener("click", async () => {
 
 // ---------------------------------------------------------------------------
 // Vista: Reglas de clasificación (pe_reglas + pe_catalogo_empresas)
+// Los selects de categoría/sector/tamaño se llenan con lo que YA existe en la
+// base (para evitar typos que crean categorías "fantasma" como "Desconocido"
+// vs "desconocido") y siempre incluyen "+ Agregar nuevo…" para dar de alta
+// una categoría que todavía no existe.
 // ---------------------------------------------------------------------------
+const NIVELES_REGLA = ["Estratégico", "Táctico", "Operativo"];
+const CUSTOM_VALUE = "__nuevo__";
+
+function fillSelectConOpcionNueva(id, opciones, placeholder) {
+  const el = document.getElementById(id);
+  const actual = el.value;
+  el.innerHTML = `<option value="">${placeholder}</option>` +
+    opciones.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("") +
+    `<option value="${CUSTOM_VALUE}">+ Agregar nuevo…</option>`;
+  if (opciones.includes(actual)) el.value = actual;
+}
+function wireCustomToggle(selectId, inputId) {
+  document.getElementById(selectId).addEventListener("change", (e) => {
+    const esNuevo = e.target.value === CUSTOM_VALUE;
+    document.getElementById(inputId).classList.toggle("hidden", !esNuevo);
+    if (esNuevo) document.getElementById(inputId).focus();
+  });
+}
+function leerSelectOCustom(selectId, inputId) {
+  const sel = document.getElementById(selectId);
+  if (sel.value === CUSTOM_VALUE) return document.getElementById(inputId).value.trim();
+  return sel.value;
+}
+function limpiarCustom(selectId, inputId) {
+  document.getElementById(inputId).value = "";
+  document.getElementById(inputId).classList.add("hidden");
+  document.getElementById(selectId).value = "";
+}
+async function valoresUnicos(pares) {
+  // pares: [[tabla, columna, filtroEq?], ...] — junta valores únicos de varias consultas
+  const resultados = await Promise.all(pares.map(([tabla, col, eqCol, eqVal]) => {
+    let q = sb.from(tabla).select(col).not(col, "is", null).limit(5000);
+    if (eqCol) q = q.eq(eqCol, eqVal);
+    return q;
+  }));
+  const set = new Set();
+  resultados.forEach(({ data }) => (data || []).forEach(r => r[Object.keys(r)[0]] && set.add(r[Object.keys(r)[0]])));
+  return [...set].sort();
+}
+async function refreshCategoriaOptions() {
+  const tipo = document.getElementById("rTipo").value;
+  limpiarCustom("rCategoria", "rCategoriaNueva");
+  if (tipo === "nivel") {
+    fillSelectConOpcionNueva("rCategoria", NIVELES_REGLA, "Selecciona un nivel…");
+  } else {
+    const areas = await valoresUnicos([["pe_reglas", "categoria", "tipo", "area"], ["pe_contactos", "area"]]);
+    fillSelectConOpcionNueva("rCategoria", areas, "Selecciona un área…");
+  }
+}
+async function refreshCatalogoOptions() {
+  const [sectores, tamanos] = await Promise.all([
+    valoresUnicos([["pe_catalogo_empresas", "sector"], ["pe_empresas", "sector"]]),
+    valoresUnicos([["pe_catalogo_empresas", "tamano"], ["pe_empresas", "tamano"]]),
+  ]);
+  fillSelectConOpcionNueva("cSector", sectores, "Selecciona un sector…");
+  fillSelectConOpcionNueva("cTamano", tamanos, "Selecciona un tamaño…");
+  limpiarCustom("cSector", "cSectorNueva");
+  limpiarCustom("cTamano", "cTamanoNueva");
+}
+document.getElementById("rTipo").addEventListener("change", refreshCategoriaOptions);
+wireCustomToggle("rCategoria", "rCategoriaNueva");
+wireCustomToggle("cSector", "cSectorNueva");
+wireCustomToggle("cTamano", "cTamanoNueva");
+
 async function loadReglas() {
   const { data } = await sb.from("pe_reglas").select("*").order("tipo").order("categoria").order("palabra_clave");
   const el = document.getElementById("listReglas");
@@ -555,12 +626,13 @@ async function deleteRegla(id) {
 }
 document.getElementById("btnAddRegla").addEventListener("click", async () => {
   const tipo = document.getElementById("rTipo").value;
-  const categoria = document.getElementById("rCategoria").value.trim();
+  const categoria = leerSelectOCustom("rCategoria", "rCategoriaNueva").trim();
   const palabra_clave = norm(document.getElementById("rPalabra").value.trim());
-  if (!categoria || !palabra_clave) return;
+  if (!categoria || !palabra_clave) { alert("Elige (o escribe) una categoría, y una palabra clave."); return; }
   await sb.from("pe_reglas").insert({ tipo, categoria, palabra_clave, orden: 0 });
-  document.getElementById("rCategoria").value = ""; document.getElementById("rPalabra").value = "";
+  document.getElementById("rPalabra").value = "";
   loadReglas();
+  refreshCategoriaOptions();
 });
 
 async function loadCatalogo() {
@@ -578,12 +650,13 @@ async function deleteCatalogo(id) {
 }
 document.getElementById("btnAddCatalogo").addEventListener("click", async () => {
   const patron = norm(document.getElementById("cPatron").value.trim());
-  const sector = document.getElementById("cSector").value.trim();
-  const tamano = document.getElementById("cTamano").value.trim();
-  if (!patron || !sector || !tamano) return;
+  const sector = leerSelectOCustom("cSector", "cSectorNueva").trim();
+  const tamano = leerSelectOCustom("cTamano", "cTamanoNueva").trim();
+  if (!patron || !sector || !tamano) { alert("Completa el patrón y elige (o escribe) sector y tamaño."); return; }
   await sb.from("pe_catalogo_empresas").insert({ patron, sector, tamano });
-  document.getElementById("cPatron").value = ""; document.getElementById("cSector").value = ""; document.getElementById("cTamano").value = "";
+  document.getElementById("cPatron").value = "";
   loadCatalogo();
+  refreshCatalogoOptions();
 });
 
 // ---------------------------------------------------------------------------
@@ -673,6 +746,7 @@ document.getElementById("tabReglasBtn").addEventListener("click", () => {
   document.getElementById("viewReglas").classList.remove("hidden");
   document.getElementById("viewContactos").classList.add("hidden");
   loadReglas(); loadCatalogo();
+  refreshCategoriaOptions(); refreshCatalogoOptions();
 });
 document.getElementById("btnExport").addEventListener("click", exportCsv);
 document.getElementById("btnReclasificar").addEventListener("click", reclasificar);
